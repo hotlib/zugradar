@@ -1,0 +1,115 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+<script src="angularjs/angular.min.js"></script>
+<script src="jquery/jquery-2.1.0.min.js"></script>
+<script src="bootstrap-3.1.1/js/bootstrap.min.js"></script>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link href="bootstrap-3.1.1/css/bootstrap.min.css" rel="stylesheet" media="screen">
+<link rel="stylesheet" type="text/css" href="resources/styles.css">
+<title>ZugRadar Aktuelle Informationen</title>
+
+</head>
+<body>
+<script type="text/javascript">
+	zugApp = angular.module("ZugRadarApp", []);
+	zugApp.controller("ZugRadarController", function ($scope, trainPositionService) {
+		trainPositionService.getTrainPosition(function(data, status, headers, config) {
+					$scope.trains = data.t;
+				});
+	});
+
+zugApp.controller("ZugRadarDetailController", function ($scope, trainDetailService) {
+		$scope.init = function(trainid){
+			updateTrainDetail(trainid);
+		};
+		function updateTrainDetail(trainId){
+			trainDetailService.getTrainDetail(trainId, function(data, status, headers, config) {
+			$scope.trainDetail = data.look.singletrain[0];
+			});
+		}
+	});
+
+	zugApp.service('trainPositionService', function($http) {
+		function error(data, status, headers, config){
+			alert("Couldn't load data; status: " + status);
+		}
+		this.getTrainPosition = function(successCallback){
+			var url = 'http://localhost:8080/train';		
+		    $http({method: 'GET', url: url}).success(successCallback).error(error);
+		};
+	});
+
+	zugApp.service('trainDetailService', function($http) {
+		function error(data, status, headers, config){
+			alert("Couldn't load data; status: " + status);
+		}
+		this.getTrainDetail = function(trainId, successCallback){
+			var url = 'http://localhost:8080/detail/' + trainId.replace(/\//g,"-");
+		    $http({method: 'GET', url: url}).success(successCallback).error(error);
+		};
+	});
+
+</script>
+<div class="container">
+	<div ng-app="ZugRadarApp" ng-controller="ZugRadarController">
+		<div class="panel panel-default">
+	 	<div class="panel-heading text-center">
+	 	<h3><span class="glyphicon glyphicon-search"></span> ZugRadar - Aktuelle Informationen </h3></div>
+	 	<input type="text" class="form-control" placeholder="Zugziel hier eintippen (z.B Meidling)" ng-model="destination">
+	 	<div class="panel-heading"></div>
+
+		<table class="table">
+		<thead>
+	  		<tr>
+				<th>Zugziel</th>
+				<th>Zugname</th>
+				<th ng-if="filteredTrains.length <= 20">Aktueller Status des Zuges</th>
+			</tr>
+	  	</thead>
+		<tbody>
+	    <tr ng-repeat="train in filteredTrains = (trains |  filter:{l:destination})">
+	   		<td>{{train.l}}</td>
+			<td>{{train.n}}</td>
+		  	<td ng-if="filteredTrains.length <= 20" ng-controller="ZugRadarDetailController" ng-init="init(train.i)">
+	  			<ul>
+	  				<li>Abfahrtszeit: {{trainDetail.pstopname}} - 
+	  				
+	  				<span ng-if="trainDetail.pdep_t">{{trainDetail.pdep_t}}</span>
+					<span ng-if="!trainDetail.pdep_t && trainDetail.pdep">{{trainDetail.pdep}}</span>
+					<span ng-if="!trainDetail.pdep_t && !trainDetail.pdep"><i>Keine Information vorhanden</i></span>
+
+	  				<span ng-if="trainDetail.pdep_d > 0">
+	  				(Verspätung {{trainDetail.pdep_d}} Minuten)
+	  				</span></li>
+					
+					<li>Abfahrtszeit: {{trainDetail.nstopname}} - 
+					<span ng-if="trainDetail.ndep_t">{{trainDetail.ndep_t}}</span>
+					<span ng-if="!trainDetail.ndep_t && trainDetail.ndep">{{trainDetail.ndep}}</span>
+					<span ng-if="!trainDetail.ndep_t && !trainDetail.ndep"><i>Keine Information vorhanden</i></span>
+
+					<span ng-if="trainDetail.ndep_d > 0">(Verspätung {{trainDetail.ndep_d}} Minuten)</span></li>
+	  				
+	  				<li>Abfahrtszeit: {{trainDetail.fstopname}} - 
+					<span ng-if="trainDetail.fdep_t">{{trainDetail.fdep_t}}</span>
+					<span ng-if="!trainDetail.fdep_t && trainDetail.fdep">{{trainDetail.fdep}}</span>
+					<span ng-if="!trainDetail.fdep_t && !trainDetail.fdep"><i>Keine Information vorhanden</i></span>
+	  				<span ng-if="trainDetail.fdep_d > 0">(Verspätung {{trainDetail.fdep_d}} Minuten)</span></li>
+	  				
+	  				<li>Ankunftszeit: {{trainDetail.lstopname}} - 
+	  				<span ng-if="trainDetail.larr_t">{{trainDetail.larr_t}}</span>
+					<span ng-if="!trainDetail.larr_t && trainDetail.larr">{{trainDetail.larr}}</span>
+					<span ng-if="!trainDetail.larr_t && !trainDetail.larr"><i>Keine Information vorhanden</i></span>
+	  				
+	  				<span ng-if="trainDetail.larr_d > 0">(Verspätung {{trainDetail.larr_d}} Minuten)</span></li>
+	  			</ul>
+	  		</td>
+		</tr>
+		</tbody>
+	  	</table>
+		</div>
+	</div>
+</div>
+</body>
+</html>
